@@ -152,9 +152,38 @@ def handle_cancel():
         return
 
     st.session_state["file_status"][current_file]["excluded"] = True
+    st.session_state["excluded_files"].append(current_file)
     st.session_state["error_message"] = f"ファイル '{current_file}' の処理をキャンセルしました。"
     # パスワード入力をリセット
     st.session_state["password_input"] = ""
+
+
+@st.dialog("パスワードを入力してください。")
+def password_dialog():
+    """パスワード入力ダイアログの UI コンポーネント"""
+    current_file = get_current_file()
+
+    if not current_file:
+        st.rerun()
+
+    st.markdown(f"### ファイル '{current_file}' は暗号化されています。パスワードを入力してください。")
+
+    # エラーメッセージの表示
+    if st.session_state["error_message"]:
+        st.error(st.session_state["error_message"])
+
+    # パスワード入力とボタン
+    password = st.text_input("パスワード", type="password", key="password_input")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.button(
+            "Submit", key="submit_password", on_click=handle_submit, type="primary"
+        )
+
+    with col2:
+        st.button("Cancel", key="cancel_password", on_click=handle_cancel)
 
 
 # ================================
@@ -239,24 +268,7 @@ if st.session_state["processing"]:
     current_file = get_current_file()
 
     if current_file:
-        st.markdown(f"### ファイル '{current_file}' は暗号化されています。パスワードを入力してください。")
-
-        # エラーメッセージの表示
-        if st.session_state["error_message"]:
-            st.error(st.session_state["error_message"])
-
-        # パスワード入力とボタン
-        password = st.text_input("パスワード", type="password", key="password_input")
-
-        col1, col2 = st.columns(2)
-
-        with col1:
-            st.button(
-                "Submit", key="submit_password", on_click=handle_submit, type="primary"
-            )
-
-        with col2:
-            st.button("Cancel", key="cancel_password", on_click=handle_cancel)
+        password_dialog()
     else:
         # すべての暗号化されたファイルが処理された場合
         st.session_state["processing"] = False
@@ -268,3 +280,7 @@ if st.session_state["processing"]:
                 st.write(f)
         else:
             st.info("読み取ることができたファイルはありませんでした。")
+        if st.session_state["excluded_files"]:
+            st.markdown("### 読み取ることができなかったファイルの名前:")
+            for f in st.session_state["excluded_files"]:
+                st.write(f)
